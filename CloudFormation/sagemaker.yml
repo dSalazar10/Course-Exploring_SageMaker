@@ -6,7 +6,7 @@ Parameters:
 Resources:
   BasicNotebookInstance:
     DependsOn: GitRepo
-    Type: "AWS::SageMaker::NotebookInstance"
+    Type: AWS::SageMaker::NotebookInstance
     Properties:
       # An array of up to three Git repositories associated with the notebook instance
       AdditionalCodeRepositories: 
@@ -28,10 +28,13 @@ Resources:
       # Whether root access is enabled or disabled for users of the notebook instance
       # RootAccess: String
       # The VPC security group IDs
-      # SecurityGroupIds: 
-      #   - String
+      SecurityGroupIds: 
+        - Fn::ImportValue:
+            !Sub "${EnvironmentName}-VPCSG"
       # The ID of the subnet in a VPC to which you would like to have a connectivity from your ML compute instance.
-      # SubnetId: String
+      SubnetId: 
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-PUB1-SN"
       # A list of key-value pairs to apply to this resource
       # Tags: 
       #   - Tag
