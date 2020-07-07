@@ -4,7 +4,8 @@ Parameters:
     Type: String
 
 Resources:
-  BasicNotebookInstance:
+  NotebookInstance:
+    Description: This is a Jupyter Notebook instance for data exploration
     DependsOn: GitRepo
     Type: AWS::SageMaker::NotebookInstance
     Properties:
@@ -43,6 +44,7 @@ Resources:
 
   GitRepo:
     Type: AWS::SageMaker::CodeRepository
+    Description: This is a link to a GitHub Repo that is stored in SageMaker
     Properties: 
       # The name of the Git repository.
       CodeRepositoryName: !Sub "${EnvironmentName}-Udacity"
@@ -54,6 +56,40 @@ Resources:
         # The Amazon Resource Name (ARN) of the AWS Secrets Manager secret that contains the credentials used to access the git repository. 
         # SecretArn: String
       
+  Endpoint:
+    Type: "AWS::SageMaker::Endpoint"
+    Properties:
+      # The name of the AWS::SageMaker::EndpointConfig resource that specifies the configuration for the endpoint
+      EndpointConfigName:
+        !GetAtt EndpointConfig.EndpointConfigName
+      # The name of the endpoint
+      # EndpointName: String
+      # Specifies the list of type VariantProperty to override with the values provided by EndpointConfig.
+      # ExcludeRetainedVariantProperties: 
+      #   # The type of varient property: DesiredInstanceCount or DesiredWeight
+      #   - VariantPropertyType: String
+      # Enables or disables the retention of variant properties
+      # RetainAllVariantProperties: Boolean
+      # A list of key-value pairs to apply to this resource
+      # Tags: 
+      #   - Tag
+
+  EndpointConfig:
+    Type: "AWS::SageMaker::EndpointConfig"
+    Properties:
+      ProductionVariants:
+        - InitialInstanceCount: 1
+          InitialVariantWeight: 1.0
+          InstanceType: ml.t2.large
+          ModelName: !GetAtt Model.ModelName
+          VariantName: !GetAtt Model.ModelName
+  Model:
+    Type: "AWS::SageMaker::Model"
+    Properties:
+      PrimaryContainer:
+        Image: !FindInMap [RegionMap, !Ref "AWS::Region", "NullTransformer"]
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+
   ExecutionRole: 
     Type: "AWS::IAM::Role"
     Properties: 
@@ -79,5 +115,5 @@ Resources:
                 Action: "*"
                 Resource: "*"
 Outputs:
-  BasicNotebookInstanceId:
-    Value: !Ref BasicNotebookInstance
+  NotebookInstanceId:
+    Value: !Ref NotebookInstance
