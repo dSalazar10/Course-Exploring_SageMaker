@@ -2,10 +2,10 @@ Parameters:
   EnvironmentName:
     Description: An environment name that will be prefixed to resource names
     Type: String
-
+  
 Resources:
   NotebookInstance:
-    Description: This is a Jupyter Notebook instance for data exploration
+    Description: This is used for deploying models
     DependsOn: GitRepo
     Type: AWS::SageMaker::NotebookInstance
     Properties:
@@ -25,7 +25,9 @@ Resources:
       # The name of the new notebook instance
       NotebookInstanceName: !Sub "${EnvironmentName}-SageMaker-Notebook"
       # AWS Role that notebook uses when working with AWS Resources
-      RoleArn: !GetAtt ExecutionRole.Arn
+      RoleArn: 
+        Fn::ImportValue:
+          !Sub "${EnvironmentName}-SM-Role"
       # Whether root access is enabled or disabled for users of the notebook instance
       # RootAccess: String
       # The VPC security group IDs
@@ -56,64 +58,7 @@ Resources:
         # The Amazon Resource Name (ARN) of the AWS Secrets Manager secret that contains the credentials used to access the git repository. 
         # SecretArn: String
       
-  Endpoint:
-    Type: "AWS::SageMaker::Endpoint"
-    Properties:
-      # The name of the AWS::SageMaker::EndpointConfig resource that specifies the configuration for the endpoint
-      EndpointConfigName:
-        !GetAtt EndpointConfig.EndpointConfigName
-      # The name of the endpoint
-      # EndpointName: String
-      # Specifies the list of type VariantProperty to override with the values provided by EndpointConfig.
-      # ExcludeRetainedVariantProperties: 
-      #   # The type of varient property: DesiredInstanceCount or DesiredWeight
-      #   - VariantPropertyType: String
-      # Enables or disables the retention of variant properties
-      # RetainAllVariantProperties: Boolean
-      # A list of key-value pairs to apply to this resource
-      # Tags: 
-      #   - Tag
-
-  EndpointConfig:
-    Type: "AWS::SageMaker::EndpointConfig"
-    Properties:
-      ProductionVariants:
-        - InitialInstanceCount: 1
-          InitialVariantWeight: 1.0
-          InstanceType: ml.t2.large
-          ModelName: !GetAtt Model.ModelName
-          VariantName: !GetAtt Model.ModelName
-  Model:
-    Type: "AWS::SageMaker::Model"
-    Properties:
-      PrimaryContainer:
-        Image: !FindInMap [RegionMap, !Ref "AWS::Region", "NullTransformer"]
-      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
-
-  ExecutionRole: 
-    Type: "AWS::IAM::Role"
-    Properties: 
-      AssumeRolePolicyDocument: 
-        Version: "2012-10-17"
-        Statement: 
-          - 
-            Effect: "Allow"
-            Principal: 
-              Service: 
-                - "sagemaker.amazonaws.com"
-            Action: 
-              - "sts:AssumeRole"
-      Path: "/"
-      Policies: 
-        - 
-          PolicyName: "root"
-          PolicyDocument: 
-            Version: "2012-10-17"
-            Statement: 
-              - 
-                Effect: "Allow"
-                Action: "*"
-                Resource: "*"
 Outputs:
   NotebookInstanceId:
+    Description: A reference to the Jupyter Notebook instance
     Value: !Ref NotebookInstance

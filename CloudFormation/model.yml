@@ -1,0 +1,107 @@
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+  
+  TrainingImage:
+    Description: The container used to train the model
+    Type: String
+
+  ModelDataUrl:
+    Description: Location of model artefact
+    Type: String
+    
+Resources:
+  Endpoint:
+    Type: AWS::SageMaker::Endpoint
+    Properties:
+      # The name of the AWS::SageMaker::EndpointConfig resource that specifies the configuration for the endpoint
+      EndpointConfigName:
+        !GetAtt EndpointConfig.EndpointConfigName
+      # The name of the endpoint
+      # EndpointName: String
+      # Specifies the list of type VariantProperty to override with the values provided by EndpointConfig.
+      # ExcludeRetainedVariantProperties: 
+      #   # The type of varient property: DesiredInstanceCount or DesiredWeight
+      #   - VariantPropertyType: String
+      # Enables or disables the retention of variant properties
+      # RetainAllVariantProperties: Boolean
+      # A list of key-value pairs to apply to this resource
+      # Tags: 
+      #   - Tag
+
+  EndpointConfig:
+    Type: AWS::SageMaker::EndpointConfig
+    Properties:
+      # The name of the endpoint configuration
+      # EndpointConfigName: String
+      # The ARN of a KMS key that SageMaker uses to encrypt data on the storage 
+      # volume attached to the ML compute instance that hosts the endpoint
+      # KmsKeyId: String
+      # A list of ProductionVariant objects, one for each model that you want to host at this endpoint
+      ProductionVariants: 
+        - InitialInstanceCount: 1
+          InitialVariantWeight: 1.0
+          InstanceType: ml.t2.large
+          ModelName: !GetAtt Model.ModelName
+          VariantName: !GetAtt Model.ModelName
+      # A list of key-value pairs to apply to this resource.
+      # Tags: 
+      #   - Tag
+
+  Model:
+    Type: "AWS::SageMaker::Model"
+    Properties:
+      # Specifies the containers in the inference pipeline
+      Containers: 
+        - ContainerHostname: String
+          # Environment: Json # Environment Variables
+          Image: !Ref TrainingImage # Amazon ECR path
+          # Mode: String
+          ModelDataUrl: !Ref ModelDataUrl # path to tar.gz in S3
+      # The ARN of the IAM Role for SageMaker
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      # The name of the new model
+      ModelName: String
+      # The location of the primary docker image containing inference code,
+      # associated artifacts, and custom environment map that the inference
+      # code uses when the model is deployed for predictions.
+      # PrimaryContainer: 
+      #   ContainerDefinition
+      # A list of key-value pairs to apply to this resource
+      # Tags: 
+      #   - Tag
+      # A VpcConfig object that specifies the VPC that you want your model to connect to
+      # VpcConfig: 
+      #   VpcConfig
+
+  ExecutionRole: 
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement: 
+          - 
+            Effect: Allow
+            Principal: 
+              Service: 
+                - sagemaker.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Path: /
+      Policies: 
+        - 
+          PolicyName: root
+          PolicyDocument: 
+            Version: 2012-10-17
+            Statement: 
+              - 
+                Effect: Allow
+                Action: "*"
+                Resource: "*"
+Outputs:
+  EndpointId:
+    Description: A reference to the Enpoint
+    Value: !Ref Endpoint
+  EndpointName:
+    Value: !GetAtt Endpoint.EndpointName

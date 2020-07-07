@@ -72,7 +72,10 @@ function SetupStack {
     echo ""
     echo "Select from the following options:"
     echo "1) Network Stack"
-    echo "2) Sagemaker Stack"
+    echo "2) Notebook Stack"
+    echo "3) IAM Stack"
+    echo "4) Model Stack"
+    echo "5) Lambda Stack"
     echo "~:"
     read choice
     case $choice in
@@ -82,9 +85,24 @@ function SetupStack {
             paramfile="network-parameters.json"
             ;;
         2)
-            stackname="SagemakerStack"
-            tempfile="sagemaker.yml"
-            paramfile="sagemaker-parameters.json"
+            stackname="NotebookStack"
+            tempfile="notebook.yml"
+            paramfile="notebook-parameters.json"
+            ;;
+        3)
+            stackname="IAMStack"
+            tempfile="iam.yml"
+            paramfile="iam-parameters.json"
+            ;;
+        4)
+            stackname="ModelStack"
+            tempfile="model.yml"
+            paramfile="model-parameters.json"
+            ;;
+        5)
+            stackname="LambdaStack"
+            tempfile="lambda.yml"
+            paramfile="lambda-parameters.json"
             ;;
     esac
 }
