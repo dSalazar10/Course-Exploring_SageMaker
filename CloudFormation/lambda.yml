@@ -143,6 +143,22 @@ Resources:
       # The ID of the RestApi resource in which you want to create this resource.
       RestApiId: !Ref ApiGateway
 
+  lambdaApiGatewayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      # The action that the principal can use on the function
+      Action: lambda:InvokeFunction
+      # For Alexa Smart Home functions
+      # EventSourceToken: String
+      # The name of the Lambda function
+      FunctionName: !GetAtt SentimentLambdaFunction.Arn
+      # The AWS service or account that invokes the function
+      Principal: apigateway.amazonaws.com
+      # the ID of the account that owns the resource
+      # SourceAccount: String
+      # the ARN of the AWS resource that invokes the function
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*/*"
+
   ApiGatewayMethod:
     Type: AWS::ApiGateway::Method
     Properties:

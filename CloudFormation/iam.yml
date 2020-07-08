@@ -83,7 +83,7 @@ Outputs:
     Export:
       Name: !Sub ${EnvironmentName}-L-Role
   APIGatewayRoleArn:
-    Value: !GetAtt [LambdaRole, Arn]
+    Value: !GetAtt [ApiGatewayRole, Arn]
     Description: A reference to the role's arn
     Export:
       Name: !Sub ${EnvironmentName}-AG-Role
