@@ -74,8 +74,7 @@ function SetupStack {
     echo "1) Network Stack"
     echo "2) Notebook Stack"
     echo "3) IAM Stack"
-    echo "4) Model Stack"
-    echo "5) Lambda Stack"
+    echo "4) Lambda Stack"
     echo "~:"
     read choice
     case $choice in
@@ -95,11 +94,6 @@ function SetupStack {
             paramfile="iam-parameters.json"
             ;;
         4)
-            stackname="ModelStack"
-            tempfile="model.yml"
-            paramfile="model-parameters.json"
-            ;;
-        5)
             stackname="LambdaStack"
             tempfile="lambda.yml"
             paramfile="lambda-parameters.json"

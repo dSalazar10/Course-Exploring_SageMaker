@@ -1,3 +1,8 @@
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
 Resources:
   SentimentLambdaFunction:
     Type: AWS::Lambda::Function
@@ -20,7 +25,7 @@ Resources:
                   if word in vocabulary:  # If the word is one that occurs in the vocabulary, increase its count.
                       bow[vocabulary[word]] += 1
               return bow
-          def lambda_handler(event, context):
+          def handler(event, context):
 
               vocab = "*** ACTUAL VOCABULARY GOES HERE ***"
 
@@ -55,16 +60,16 @@ Resources:
       # FileSystemConfigs: 
       #   - FileSystemConfig
       # The name of the Lambda function, up to 64 characters in length
-      FunctionName: sentiment_lambda_function
+      FunctionName: 'sentiment_lambda_function'
       # The name of the method within your code that Lambda calls to execute your function
-      Handler: lambda_handler
+      Handler: index.handler
       # The ARN of the AWS Key Management Service (AWS KMS) key that's used to encrypt your function's environment variables
       # KmsKeyArn: String
       # A list of function layers to add to the function's execution environment
       # Layers: 
       #   - String
       # The amount of memory that your function has access to
-      # MemorySize: Integer
+      MemorySize: 256
       # The number of simultaneous executions to reserve for the function
       # ReservedConcurrentExecutions: Integer
       # ARN of the function's execution role
@@ -77,17 +82,199 @@ Resources:
       # Tags: 
       #   - Tag
       # The amount of time that Lambda allows a function to run before stopping it
-      # Timeout: Integer
+      Timeout: 60
       # Set Mode to Active to sample and trace a subset of incoming requests with AWS X-Ray
       # TracingConfig: 
       #   TracingConfig
       # For network connectivity to AWS resources in a VPC, specify a list of security groups and subnets in the VPC
-      VpcConfig:
-        # The VPC security group IDs
-        SecurityGroupIds: 
-          - Fn::ImportValue:
-              !Sub "${EnvironmentName}-VPCSG"
-        # The ID of the subnet in a VPC to which you would like to have a connectivity from your ML compute instance.
-        SubnetId: 
+      # VpcConfig:
+      #   # The VPC security group IDs
+      #   SecurityGroupIds: 
+      #     - Fn::ImportValue:
+      #         !Sub "${EnvironmentName}-VPCSG"
+      #   # The ID of the subnet in a VPC to which you would like to have a connectivity from your ML compute instance.
+      #   SubnetIds: 
+      #     - Fn::ImportValue:
+      #         !Sub "${EnvironmentName}-PUB1-SN"
+
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      # The source of the API key for metering requests according to a usage plan
+      ApiKeySourceType: HEADER
+      # The list of binary media types that are supported by the RestApi resource
+      # BinaryMediaTypes: 
+      #   - String
+      # An OpenAPI specification that defines a set of RESTful APIs in JSON format
+      # Body: JSON
+      # The Amazon Simple Storage Service (Amazon S3) location that points to an OpenAPI file
+      # BodyS3Location: 
+      #   S3Location
+      # The ID of the RestApi resource that you want to clone.
+      # CloneFrom: String
+      # A description of the RestApi resource.
+      Description: An API Gateway with a Lambda Integration
+      # A list of the endpoint types of the API. Use this property when creating an API.
+      EndpointConfiguration: 
+        Types:
+          - EDGE
+      # Indicates whether to roll back the resource if a warning occurs while API Gateway is creating the RestApi resource.
+      # FailOnWarnings: Boolean
+      # A nullable integer that is used to enable/disable compression on an API
+      # MinimumCompressionSize: Integer
+      # A name for the RestApi resource.
+      Name: SentimentAnalysis
+      # Custom header parameters for the request.
+      # Parameters: 
+      #   Key : Value
+      # A policy document that contains the permissions for the RestApi resource
+      # Policy: Json
+      # An array of arbitrary tags (key-value pairs) to associate with the API.
+      # Tags: 
+      #   - Tag
+
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      # ID of the parent resource
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      # A path name for the resource.
+      PathPart: 'lambda'
+      # The ID of the RestApi resource in which you want to create this resource.
+      RestApiId: !Ref ApiGateway
+
+  ApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      # Indicates whether the method requires clients to submit a valid API key.
+      ApiKeyRequired: false
+      # A list of authorization scopes configured on the method
+      # AuthorizationScopes: 
+      #   - String
+      # The method's authorization type
+      AuthorizationType: NONE
+      # The identifier of the authorizer to use on this method
+      # AuthorizerId: String
+      # The HTTP method that clients use to call this method.
+      HttpMethod: POST
+      # The backend system that the method calls when it receives a request.
+      Integration: 
+        # A list of request parameters whose values API Gateway caches
+        # CacheKeyParameters: 
+        #   - String
+        # An API-specific tag group of related cached parameters.
+        # CacheNamespace: String
+        # The ID of the VpcLink used for the integration when connectionType=VPC_LINK, otherwise undefined.
+        # ConnectionId: String
+        # The type of the network connection to the integration endpoint
+        ConnectionType: INTERNET
+        # Specifies how to handle request payload content type conversions
+        # ContentHandling: String
+        # The credentials that are required for the integration
+        Credentials:
           Fn::ImportValue:
-            !Sub "${EnvironmentName}-PUB1-SN"
+              !Sub "${EnvironmentName}-AG-Role"
+        # The integration's HTTP method type.
+        IntegrationHttpMethod: POST
+        # The response that API Gateway provides after a method's backend completes processing a request. 
+        # IntegrationResponses: 
+        #   - IntegrationResponse
+        # Indicates when API Gateway passes requests to the targeted backend.
+        PassthroughBehavior: WHEN_NO_MATCH
+        # The request parameters that API Gateway sends with the backend request.
+        # RequestParameters: 
+        #   Key : Value
+        # A map of Apache Velocity templates that are applied on the request payload.
+        # RequestTemplates: 
+        #   Key : Value
+        # Custom timeout between 50 and 29,000 milliseconds.
+        TimeoutInMillis: 29000
+        # The type of backend that your method is running
+        Type: AWS_PROXY
+        # The Uniform Resource Identifier (URI) for the integration.
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SentimentLambdaFunction.Arn}/invocations'
+      # The responses that can be sent to the client who calls the method.
+      # MethodResponses: 
+      #   - MethodResponse
+      # A friendly operation name for the method.
+      OperationName: 'lambda'
+      # The resources that are used for the request's content type.
+      # RequestModels: 
+      #   Key : Value
+      # The request parameters that API Gateway accepts.
+      # RequestParameters: 
+      #   Key : Value
+      # The ID of the associated request validator.
+      # RequestValidatorId: String
+      # The ID of an API Gateway resource
+      ResourceId: !Ref ApiGatewayResource
+      # The ID of the RestApi resource in which API Gateway creates the method.
+      RestApiId: !Ref ApiGateway
+
+  ApiGatewayModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      # The content type for the model.
+      ContentType: 'application/json'
+      # A description that identifies this model.
+      # Description: String
+      # A name for the model.
+      # Name: String
+      # The ID of a REST API with which to associate this model.
+      RestApiId: !Ref ApiGateway
+      # The schema to use to transform data to one or more output formats.
+      Schema: {}
+      
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      # Specifies settings for logging access in this stage.
+      # AccessLogSetting: 
+      #   AccessLogSetting
+      # Indicates whether cache clustering is enabled for the stage.
+      # CacheClusterEnabled: Boolean
+      # The stage's cache cluster size.
+      # CacheClusterSize: String
+      # Specifies settings for the canary deployment in this stage.
+      # CanarySetting: 
+      #   CanarySetting
+      # The ID of the client certificate that API Gateway uses to call your integration endpoints in the stage.
+      # ClientCertificateId: String
+      # The ID of the deployment that the stage is associated with
+      DeploymentId: !Ref ApiGatewayDeployment
+      # A description of the stage.
+      Description: Lambda API Stage v0
+      # The version ID of the API documentation snapshot.
+      # DocumentationVersion: String
+      # Settings for all methods in the stage.
+      # MethodSettings: 
+      #   - MethodSetting
+      # The ID of the RestApi resource that you're deploying with this stage.
+      RestApiId: !Ref ApiGateway
+      # The name of the stage, which API Gateway uses as the first path segment in the invoked Uniform Resource Identifier (URI).
+      StageName: 'v0'
+      # An array of arbitrary tags
+      # Tags: 
+      #   - Tag
+      # Specifies whether active X-Ray tracing is enabled for this stage.
+      # TracingEnabled: Boolean
+      # A map that defines the stage variables
+      # Variables: 
+      #   Key : Value
+      
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethod
+    Properties:
+      # Specifies settings for the canary deployment.
+      # DeploymentCanarySettings: 
+      #   DeploymentCanarySettings
+      # A description of the purpose of the API Gateway deployment.
+      Description: Lambda API Deployment
+      # The ID of the RestApi resource to deploy.
+      RestApiId: !Ref ApiGateway
+      # Configures the stage that API Gateway creates with this deployment.
+      # StageDescription: 
+      #   StageDescription
+      # A name for the stage that API Gateway creates with this deployment. 
+      # StageName: String

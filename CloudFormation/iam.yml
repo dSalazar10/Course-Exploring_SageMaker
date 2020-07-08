@@ -45,6 +45,31 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
       Path: /
+
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - 
+            Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - 
+          PolicyName: LambdaAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - 
+                Effect: Allow
+                Action: "lambda:*"
+                Resource: "*"
                 
 Outputs:
   SageMakerRoleArn:
@@ -57,3 +82,8 @@ Outputs:
     Description: A reference to the role's arn
     Export:
       Name: !Sub ${EnvironmentName}-L-Role
+  APIGatewayRoleArn:
+    Value: !GetAtt [LambdaRole, Arn]
+    Description: A reference to the role's arn
+    Export:
+      Name: !Sub ${EnvironmentName}-AG-Role
